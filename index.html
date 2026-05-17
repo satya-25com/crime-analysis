@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrimeIQ India – Crime Analytics Dashboard</title>
+
+  <!-- Bootstrap 5 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LOADING SCREEN
+  ═══════════════════════════════════════════════════════════ -->
+  <div id="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring ring2"></div>
+        <div class="spinner-ring ring3"></div>
+      </div>
+      <h2 class="loading-title">India Crime Analytics</h2>
+      <p class="loading-sub">Loading intelligence data…</p>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       NAVBAR
+  ═══════════════════════════════════════════════════════════ -->
+  <nav class="navbar navbar-expand-lg fixed-top glass-nav" id="mainNav">
+    <div class="container-fluid px-3">
+      <!-- Sidebar toggle + Logo -->
+      <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-icon" id="sidebarToggle" title="Toggle Sidebar">
+          <i class="fa fa-bars"></i>
+        </button>
+        <a class="navbar-brand" href="#">🔍 CrimeIQ India</a>
+      </div>
+
+      <!-- Right controls -->
+      <div class="d-flex align-items-center gap-2 ms-auto">
+        <span class="nav-badge" id="liveIndicator">
+          <span class="pulse-dot"></span> LIVE
+        </span>
+
+        <button class="btn btn-icon" id="themeToggle" title="Toggle Theme">
+          <i class="fa fa-moon" id="themeIcon"></i>
+        </button>
+
+        <label class="btn btn-outline-accent btn-sm" title="Upload CSV">
+          <i class="fa fa-upload me-1"></i> Upload CSV
+          <input type="file" id="csvInput" accept=".csv" hidden />
+        </label>
+
+        <button class="btn btn-outline-danger btn-sm" id="exportPDFBtn" title="Export PDF">
+          <i class="fa fa-file-pdf me-1"></i> Export PDF
+        </button>
+
+        <button class="btn btn-outline-cyan btn-sm" id="snapshotBtn" title="Snapshot">
+          <i class="fa fa-camera me-1"></i> Snapshot
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SIDEBAR
+  ═══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <nav class="sidebar-nav">
+      <a class="sidebar-link active" data-section="dashboard" href="#">
+        <i class="fa fa-chart-pie"></i><span>Dashboard</span>
+      </a>
+      <a class="sidebar-link" data-section="crime-analytics" href="#">
+        <i class="fa fa-magnifying-glass-chart"></i><span>Crime Analytics</span>
+      </a>
+      <a class="sidebar-link" data-section="state-analysis" href="#">
+        <i class="fa fa-map-location-dot"></i><span>State Analysis</span>
+      </a>
+      <a class="sidebar-link" data-section="predictions" href="#">
+        <i class="fa fa-chart-line"></i><span>Predictions</span>
+      </a>
+      <a class="sidebar-link" data-section="ai-insights" href="#">
+        <i class="fa fa-robot"></i><span>AI Insights</span>
+      </a>
+      <a class="sidebar-link" data-section="settings" href="#">
+        <i class="fa fa-gear"></i><span>Settings</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <small>CrimeIQ v2.0</small><br/>
+      <small class="text-muted">Data: 2019–2023</small>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       MAIN CONTENT
+  ═══════════════════════════════════════════════════════════ -->
+  <main class="main-content" id="mainContent">
+
+    <!-- ─── SECTION: DASHBOARD ─── -->
+    <section id="section-dashboard" class="content-section active">
+      <div class="section-header">
+        <h1><i class="fa fa-chart-pie me-2"></i>Dashboard Overview</h1>
+        <span class="section-sub">India Crime Statistics 2019–2023</span>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="row g-3 mb-4" id="kpiRow">
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-blue">
+            <div class="kpi-icon"><i class="fa fa-file-shield"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-total">0</div>
+              <div class="kpi-label">Total Cases</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-purple">
+            <div class="kpi-icon"><i class="fa fa-map"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-states">0</div>
+              <div class="kpi-label">States Affected</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-red">
+            <div class="kpi-icon"><i class="fa fa-triangle-exclamation"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value kpi-text" id="kpi-dangerous">—</div>
+              <div class="kpi-label">Most Dangerous State</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-green">
+            <div class="kpi-icon"><i class="fa fa-shield-halved"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value kpi-text" id="kpi-safest">—</div>
+              <div class="kpi-label">Safest State</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-orange">
+            <div class="kpi-icon"><i class="fa fa-arrow-trend-up"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-growth">0<span>%</span></div>
+              <div class="kpi-label">Crime Growth %</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-cyan">
+            <div class="kpi-icon"><i class="fa fa-venus"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-women">0</div>
+              <div class="kpi-label">Women Safety Index</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-pink">
+            <div class="kpi-icon"><i class="fa fa-laptop-code"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-cyber">0</div>
+              <div class="kpi-label">Cyber Crime Cases</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3 col-xl-3">
+          <div class="kpi-card kpi-teal">
+            <div class="kpi-icon"><i class="fa fa-chart-bar"></i></div>
+            <div class="kpi-body">
+              <div class="kpi-value" id="kpi-predicted">0<span>%</span></div>
+              <div class="kpi-label">Predicted Increase %</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 1: Bar + Line -->
+      <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-bar me-2"></i>Top 10 States by Crime</span>
+              <span class="chart-badge">2023</span>
+            </div>
+            <div class="chart-wrap" style="height:320px">
+              <canvas id="barChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-line me-2"></i>Yearly Crime Trend</span>
+              <span class="chart-badge">2019–2023</span>
+            </div>
+            <div class="chart-wrap" style="height:320px">
+              <canvas id="lineChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Doughnut + Radar -->
+      <div class="row g-3 mb-3">
+        <div class="col-lg-5">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-circle-half-stroke me-2"></i>Crime Type Distribution</span>
+            </div>
+            <div class="chart-wrap" style="height:320px">
+              <canvas id="doughnutChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-spider me-2"></i>Multi-Category Radar (Top 5 States)</span>
+            </div>
+            <div class="chart-wrap" style="height:320px">
+              <canvas id="radarChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Area + Scatter -->
+      <div class="row g-3 mb-3">
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-wave-square me-2"></i>Cumulative Crime Growth</span>
+            </div>
+            <div class="chart-wrap" style="height:300px">
+              <canvas id="areaChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-circle-dot me-2"></i>Population vs Crime Rate</span>
+            </div>
+            <div class="chart-wrap" style="height:300px">
+              <canvas id="scatterChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── SECTION: CRIME ANALYTICS ─── -->
+    <section id="section-crime-analytics" class="content-section">
+      <div class="section-header">
+        <h1><i class="fa fa-magnifying-glass-chart me-2"></i>Crime Analytics</h1>
+        <span class="section-sub">Filter and explore crime patterns</span>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar mb-4">
+        <div class="filter-group">
+          <label><i class="fa fa-calendar me-1"></i>Year</label>
+          <select id="filterYear" class="form-select form-select-sm">
+            <option value="all">All Years</option>
+            <option value="2019">2019</option>
+            <option value="2020">2020</option>
+            <option value="2021">2021</option>
+            <option value="2022">2022</option>
+            <option value="2023">2023</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label><i class="fa fa-map-pin me-1"></i>State</label>
+          <select id="filterState" class="form-select form-select-sm">
+            <option value="all">All States</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label><i class="fa fa-tag me-1"></i>Crime Category</label>
+          <select id="filterCategory" class="form-select form-select-sm">
+            <option value="all">All Categories</option>
+            <option value="murder">Murder</option>
+            <option value="theft">Theft</option>
+            <option value="robbery">Robbery</option>
+            <option value="kidnapping">Kidnapping</option>
+            <option value="assault">Assault</option>
+            <option value="cyber">Cyber Crime</option>
+            <option value="domestic">Domestic Violence</option>
+            <option value="fraud">Fraud</option>
+            <option value="drugs">Drug Offences</option>
+            <option value="rape">Rape</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label><i class="fa fa-venus-mars me-1"></i>Gender</label>
+          <select id="filterGender" class="form-select form-select-sm">
+            <option value="all">All</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label><i class="fa fa-users me-1"></i>Age Group</label>
+          <select id="filterAge" class="form-select form-select-sm">
+            <option value="all">All Ages</option>
+            <option value="18-25">18–25</option>
+            <option value="26-35">26–35</option>
+            <option value="36-50">36–50</option>
+            <option value="50+">50+</option>
+          </select>
+        </div>
+        <button class="btn btn-accent btn-sm" id="applyFiltersBtn">
+          <i class="fa fa-filter me-1"></i>Apply
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" id="resetFiltersBtn">
+          <i class="fa fa-rotate-left me-1"></i>Reset
+        </button>
+      </div>
+
+      <!-- Charts -->
+      <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-bar me-2"></i>Crime Category Comparison</span>
+            </div>
+            <div class="chart-wrap" style="height:340px">
+              <canvas id="analyticsCatChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-column me-2"></i>Age Group Distribution</span>
+            </div>
+            <div class="chart-wrap" style="height:340px">
+              <canvas id="analyticsAgeChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="chart-card mb-3">
+        <div class="chart-card-header">
+          <span><i class="fa fa-table-cells me-2"></i>State × Crime Intensity Heatmap</span>
+          <span class="chart-badge">Relative Intensity</span>
+        </div>
+        <div class="table-responsive" id="heatmapContainer" style="max-height:420px;overflow-y:auto;"></div>
+      </div>
+    </section>
+
+    <!-- ─── SECTION: STATE ANALYSIS ─── -->
+    <section id="section-state-analysis" class="content-section">
+      <div class="section-header">
+        <h1><i class="fa fa-map-location-dot me-2"></i>State Analysis</h1>
+        <span class="section-sub">Geographic crime distribution across India</span>
+      </div>
+
+      <!-- Map -->
+      <div class="chart-card mb-3">
+        <div class="chart-card-header">
+          <span><i class="fa fa-earth-asia me-2"></i>India Crime Map</span>
+          <span class="chart-badge">Circle size = Total Cases</span>
+        </div>
+        <div id="crimeMap" style="height:500px;border-radius:0 0 12px 12px;"></div>
+      </div>
+
+      <!-- DataTable -->
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <span><i class="fa fa-table me-2"></i>State-wise Crime Data</span>
+        </div>
+        <div class="table-responsive p-2">
+          <table id="stateTable" class="table table-hover w-100">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Total Cases</th>
+                <th>Murder</th>
+                <th>Theft</th>
+                <th>Cyber</th>
+                <th>Crime Rate</th>
+                <th>Population (M)</th>
+              </tr>
+            </thead>
+            <tbody id="stateTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── SECTION: PREDICTIONS ─── -->
+    <section id="section-predictions" class="content-section">
+      <div class="section-header">
+        <h1><i class="fa fa-chart-line me-2"></i>Crime Predictions</h1>
+        <span class="section-sub">AI-powered forecasts for 2024–2028</span>
+      </div>
+
+      <!-- Prediction charts -->
+      <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-line me-2"></i>Predicted Crime Trend 2024–2028</span>
+              <span class="chart-badge">Linear Regression</span>
+            </div>
+            <div class="chart-wrap" style="height:340px">
+              <canvas id="predLineChart"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="chart-card">
+            <div class="chart-card-header">
+              <span><i class="fa fa-chart-bar me-2"></i>High-Risk States Forecast</span>
+            </div>
+            <div class="chart-wrap" style="height:340px">
+              <canvas id="predBarChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 3 predicted crimes -->
+      <div class="row g-3 mb-3" id="predCardsRow">
+        <div class="col-md-4">
+          <div class="pred-card pred-1">
+            <div class="pred-rank">#1</div>
+            <div class="pred-icon"><i class="fa fa-laptop-code"></i></div>
+            <div class="pred-body">
+              <div class="pred-title" id="pred-crime-1">Cyber Crime</div>
+              <div class="pred-stat" id="pred-stat-1">+42% by 2028</div>
+              <div class="pred-desc">Fastest growing category driven by digital adoption</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="pred-card pred-2">
+            <div class="pred-rank">#2</div>
+            <div class="pred-icon"><i class="fa fa-money-bill-wave"></i></div>
+            <div class="pred-body">
+              <div class="pred-title" id="pred-crime-2">Fraud</div>
+              <div class="pred-stat" id="pred-stat-2">+31% by 2028</div>
+              <div class="pred-desc">Financial fraud rising with UPI and digital payments</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="pred-card pred-3">
+            <div class="pred-rank">#3</div>
+            <div class="pred-icon"><i class="fa fa-pills"></i></div>
+            <div class="pred-body">
+              <div class="pred-title" id="pred-crime-3">Drug Offences</div>
+              <div class="pred-stat" id="pred-stat-3">+28% by 2028</div>
+              <div class="pred-desc">Narcotics trafficking expanding in border states</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── SECTION: AI INSIGHTS ─── -->
+    <section id="section-ai-insights" class="content-section">
+      <div class="section-header">
+        <h1><i class="fa fa-robot me-2"></i>AI Insights</h1>
+        <span class="section-sub">Machine-generated intelligence from crime data</span>
+      </div>
+
+      <div class="row g-3" id="insightsGrid"></div>
+    </section>
+
+    <!-- ─── SECTION: SETTINGS ─── -->
+    <section id="section-settings" class="content-section">
+      <div class="section-header">
+        <h1><i class="fa fa-gear me-2"></i>Settings</h1>
+        <span class="section-sub">Customize your dashboard experience</span>
+      </div>
+
+      <div class="row g-3">
+        <!-- Theme -->
+        <div class="col-md-6">
+          <div class="chart-card p-4">
+            <h5 class="mb-3"><i class="fa fa-palette me-2"></i>Appearance</h5>
+            <div class="setting-row">
+              <span>Dark Mode</span>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="settingTheme" checked />
+              </div>
+            </div>
+            <div class="setting-row mt-3">
+              <span>Chart Color Scheme</span>
+              <select class="form-select form-select-sm w-auto" id="colorScheme">
+                <option value="default">Default (Blue)</option>
+                <option value="warm">Warm (Orange/Red)</option>
+                <option value="cool">Cool (Teal/Cyan)</option>
+                <option value="mono">Monochrome</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Data -->
+        <div class="col-md-6">
+          <div class="chart-card p-4">
+            <h5 class="mb-3"><i class="fa fa-database me-2"></i>Data Settings</h5>
+            <div class="setting-row">
+              <span>Auto Refresh Interval</span>
+              <select class="form-select form-select-sm w-auto" id="refreshInterval">
+                <option value="0">Off</option>
+                <option value="30">30 seconds</option>
+                <option value="60">1 minute</option>
+                <option value="300">5 minutes</option>
+              </select>
+            </div>
+            <div class="setting-row mt-3">
+              <span>Data Source</span>
+              <span class="badge bg-success">NCRB Simulated</span>
+            </div>
+            <div class="setting-row mt-3">
+              <span>Last Updated</span>
+              <span class="text-muted" id="lastUpdated">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="col-12">
+          <div class="chart-card p-4">
+            <h5 class="mb-3"><i class="fa fa-circle-info me-2"></i>About CrimeIQ India</h5>
+            <p class="text-muted mb-1">Version 2.0 — India Crime Analytics Dashboard</p>
+            <p class="text-muted mb-1">Data covers 28 Indian states, 2019–2023, based on NCRB-style simulated records.</p>
+            <p class="text-muted mb-0">Built with Chart.js, Leaflet.js, DataTables, Bootstrap 5.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- /main-content -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       SCRIPTS
+  ═══════════════════════════════════════════════════════════ -->
+  <!-- jQuery (DataTables dependency) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- Bootstrap 5 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- DataTables JS -->
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+  <!-- Custom JS -->
+  <script src="script.js"></script>
+</body>
+</html>
